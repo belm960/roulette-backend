@@ -1,7 +1,6 @@
 import { createServer } from "http";
-import { Server } from "socket.io";
-import { GameData, GameStages, PlacedChip, ValueType, Winner} from "./Global";
-import { Timer } from "easytimer.js";
+import  { Server } from "socket.io";
+import  {Timer} from "easytimer.js";
 
 /** Server Handling */
 const httpServer = createServer();
@@ -10,6 +9,61 @@ const io = new Server(httpServer, {
     origin: "https://roulette-game-casino.vercel.app/"
   }
 });
+
+
+enum ValueType {
+  NUMBER,
+  NUMBERS_1_12,
+  NUMBERS_2_12,
+  NUMBERS_3_12,
+  NUMBERS_1_18,
+  NUMBERS_19_36,
+  EVEN,
+  ODD,
+  RED,
+  BLACK,
+  DOUBLE_SPLIT,
+  QUAD_SPLIT,
+  TRIPLE_SPLIT,
+  EMPTY
+}
+
+
+interface Item {
+  type: ValueType;
+  value: number;
+  valueSplit: number[];
+}
+
+
+interface PlacedChip {
+  item: Item;
+  sum: number;
+  total: number;
+}
+type rouletteData = {
+  numbers: number[];
+};
+type Winner = {
+  username: string;
+  sum: number;
+  balance:number;
+}
+
+enum GameStages {
+  PLACE_BET,
+  NO_MORE_BETS,
+  WINNERS,
+  NONE
+}
+type GameData = {
+  stage: GameStages,
+  time_remaining: number;
+  value: number;
+  wins: Winner[],
+  history: number[],
+}
+
 var timer = new Timer();
 var users = new Map<string, string>()
 var balance = new Map<string, number>()
@@ -64,7 +118,7 @@ timer.addEventListener('secondsUpdated', function (e: any) {
 
 });
 
-io.on("connection", (socket) => {
+io.on("connection", (socket: { on: (arg0: string, arg1: { (data: string): void; (data: string): void; (reason: any): void; }) => void; id: string; }) => {
   
   socket.on('enter', (data: string) => {
     users.set(socket.id, data);
