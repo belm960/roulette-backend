@@ -1,10 +1,16 @@
-const express = require("express")
+import express from "express";
 import  { Server } from "socket.io";
 import  {Timer} from "easytimer.js";
+import { createServer } from "http";
 
 /** Server Handling */
-const httpServer = express();
-const io = new Server(httpServer, {});
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+    origin: "http://localhost:3000"
+  }
+});
 
 
 enum ValueType {
@@ -33,6 +39,7 @@ interface Item {
 
 interface Tickets{
   chip: PlacedChip[],
+  odd: number,
   balance: number,
 }
 
@@ -53,6 +60,7 @@ type Winner = {
 enum GameStages {
   PLACE_BET,
   NO_MORE_BETS,
+  DRAW,
   WINNERS,
   NONE
 }
@@ -70,8 +78,11 @@ var balance = new Map<string, number>()
 let gameData = {} as GameData;
 let usersData = {} as Map<string, Tickets[]>;
 let wins = [] as Winner[];
+var number =0;
 timer.addEventListener('secondsUpdated', function (e: any) {
-  var currentSeconds = timer.getTimeValues().seconds;
+  number+=1;
+  if (number>80){number=1}
+  var currentSeconds = number;
   gameData.time_remaining = currentSeconds
   if (currentSeconds == 1) {
     console.log("Place bet");
@@ -79,10 +90,13 @@ timer.addEventListener('secondsUpdated', function (e: any) {
     usersData = new Map()
     gameData.stage = GameStages.PLACE_BET
     sendStageEvent(gameData)
-  } else if (currentSeconds == 25) {
+  } else if (currentSeconds == 50) {
     gameData.stage = GameStages.NO_MORE_BETS
+    sendStageEvent(gameData)
+
+  } else if (currentSeconds == 60) {
+    gameData.stage= GameStages.DRAW
     gameData.value = getRandomNumberInt(0, 36);
-    console.log("No More Bets")
     sendStageEvent(gameData)
 
     for(let key of Array.from( usersData.keys()) ) {
@@ -99,8 +113,8 @@ timer.addEventListener('secondsUpdated', function (e: any) {
         });
       }
     }
-
-  } else if (currentSeconds == 35) {
+  }
+  else if (currentSeconds == 70) {
     console.log("Winners")
     gameData.stage = GameStages.WINNERS
     // sort winners desc
@@ -168,57 +182,11 @@ function calculateWinnings(winningNumber: number, tickets: Tickets[]) {
       var win = 0;
       var arrayLength = placedChips.length;
       for (var i = 0; i < arrayLength; i++) {
-        
           var placedChip = placedChips[i]
-          var placedChipType = placedChip.item.type
-          var placedChipValue = placedChip.item.value
-          var placedChipSum = placedChip.sum
-          
-          if (placedChipType === ValueType.NUMBER &&  placedChipValue === winningNumber)
-          {
-              win += placedChipSum * 36;
-          }
-          else if (placedChipType === ValueType.BLACK && blackNumbers.includes(winningNumber))
-          { // if bet on black and win
-              win += placedChipSum * 2;
-          }
-          else if (placedChipType === ValueType.RED && redNumbers.includes(winningNumber))
-          { // if bet on red and win
-              win += placedChipSum * 2;
-          }
-          else if (placedChipType === ValueType.NUMBERS_1_18 && (winningNumber >= 1 && winningNumber <= 18))
-          { // if number is 1 to 18
-              win += placedChipSum * 2;
-          }
-          else if (placedChipType === ValueType.NUMBERS_19_36 && (winningNumber >= 19 && winningNumber <= 36))
-          { // if number is 19 to 36
-              win += placedChipSum * 2;
-          }
-          else if (placedChipType === ValueType.NUMBERS_1_12 && (winningNumber >= 1 && winningNumber <= 12))
-          { // if number is within range of row1
-              win += placedChipSum * 3;
-          }
-          else if (placedChipType === ValueType.NUMBERS_2_12 && (winningNumber >= 13 && winningNumber <= 24))
-          { // if number is within range of row2
-              win += placedChipSum * 3;
-          }
-          else if (placedChipType === ValueType.NUMBERS_3_12 && (winningNumber >= 25 && winningNumber <= 36))
-          { // if number is within range of row3
-              win += placedChipSum * 3;
-          }
-          else if (placedChipType === ValueType.EVEN || placedChipType === ValueType.ODD)
-          { 
-            if ( winningNumber % 2 == 0) {
-                // if number even
-                win += placedChipSum * 2;
-            } else {
-                // if number is odd
-                win += placedChipSum * 2;
-            }
-          }
+          var odd = tickets[j].odd
+          win = (placedChip.sum*(placedChips.length))*(36/odd)
       }
       totalwin+=win;
     }
-
   return totalwin;
 }
