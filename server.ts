@@ -6,7 +6,7 @@ import  {Timer} from "easytimer.js";
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
-    origin: "https://roulette-game-casino.vercel.app/"
+    origin: "http://localhost:3000"
   }
 });
 
@@ -35,6 +35,10 @@ interface Item {
   valueSplit: number[];
 }
 
+interface Tickets{
+  chip: PlacedChip[],
+  balance: number,
+}
 
 interface PlacedChip {
   item: Item;
@@ -68,7 +72,7 @@ var timer = new Timer();
 var users = new Map<string, string>()
 var balance = new Map<string, number>()
 let gameData = {} as GameData;
-let usersData = {} as Map<string, PlacedChip[]>;
+let usersData = {} as Map<string, Tickets[]>;
 let wins = [] as Winner[];
 timer.addEventListener('secondsUpdated', function (e: any) {
   var currentSeconds = timer.getTimeValues().seconds;
@@ -88,7 +92,7 @@ timer.addEventListener('secondsUpdated', function (e: any) {
     for(let key of Array.from( usersData.keys()) ) {
        var username = users.get(key);
        if (username != undefined) {
-        var chipsPlaced = usersData.get(key) as PlacedChip[]
+        var chipsPlaced = usersData.get(key) as Tickets[]
         var sumWon = calculateWinnings(gameData.value, chipsPlaced)
         var amount = balance.get(key)!;
         balance.set(key,amount+sumWon)
@@ -127,9 +131,9 @@ io.on("connection", (socket: { on: (arg0: string, arg1: { (data: string): void; 
   });
 
   socket.on('place-bet', (data: string) => {
-    var gameData = JSON.parse(data) as PlacedChip[]
-    usersData.set(socket.id, gameData)
-    balance.set(socket.id,2)
+    var gameData = JSON.parse(data) as Tickets[];
+    usersData.set(socket.id, gameData);
+    balance.set(socket.id,gameData[gameData.length-1].balance);
   });
   socket.on("disconnect", (reason) => {
     users.delete(socket.id);
@@ -160,59 +164,65 @@ function sendStageEvent(_gameData: GameData) {
 var blackNumbers = [ 2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 29, 28, 31, 33, 35 ];
 var redNumbers = [ 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 ];
 
-function calculateWinnings(winningNumber: number, placedChips: PlacedChip[]) { 
-  var win = 0;
-  var arrayLength = placedChips.length;
-  for (var i = 0; i < arrayLength; i++) {
-     
-      var placedChip = placedChips[i]
-      var placedChipType = placedChip.item.type
-      var placedChipValue = placedChip.item.value
-      var placedChipSum = placedChip.sum
-      
-      if (placedChipType === ValueType.NUMBER &&  placedChipValue === winningNumber)
-      {
-          win += placedChipSum * 36;
+function calculateWinnings(winningNumber: number, tickets: Tickets[]) {
+  var totalwin = 0;
+  var ticketLength = tickets.length;
+  for (var j = 0; j < ticketLength; j++) {
+      var placedChips: PlacedChip[] = tickets[j].chip;
+      var win = 0;
+      var arrayLength = placedChips.length;
+      for (var i = 0; i < arrayLength; i++) {
+        
+          var placedChip = placedChips[i]
+          var placedChipType = placedChip.item.type
+          var placedChipValue = placedChip.item.value
+          var placedChipSum = placedChip.sum
+          
+          if (placedChipType === ValueType.NUMBER &&  placedChipValue === winningNumber)
+          {
+              win += placedChipSum * 36;
+          }
+          else if (placedChipType === ValueType.BLACK && blackNumbers.includes(winningNumber))
+          { // if bet on black and win
+              win += placedChipSum * 2;
+          }
+          else if (placedChipType === ValueType.RED && redNumbers.includes(winningNumber))
+          { // if bet on red and win
+              win += placedChipSum * 2;
+          }
+          else if (placedChipType === ValueType.NUMBERS_1_18 && (winningNumber >= 1 && winningNumber <= 18))
+          { // if number is 1 to 18
+              win += placedChipSum * 2;
+          }
+          else if (placedChipType === ValueType.NUMBERS_19_36 && (winningNumber >= 19 && winningNumber <= 36))
+          { // if number is 19 to 36
+              win += placedChipSum * 2;
+          }
+          else if (placedChipType === ValueType.NUMBERS_1_12 && (winningNumber >= 1 && winningNumber <= 12))
+          { // if number is within range of row1
+              win += placedChipSum * 3;
+          }
+          else if (placedChipType === ValueType.NUMBERS_2_12 && (winningNumber >= 13 && winningNumber <= 24))
+          { // if number is within range of row2
+              win += placedChipSum * 3;
+          }
+          else if (placedChipType === ValueType.NUMBERS_3_12 && (winningNumber >= 25 && winningNumber <= 36))
+          { // if number is within range of row3
+              win += placedChipSum * 3;
+          }
+          else if (placedChipType === ValueType.EVEN || placedChipType === ValueType.ODD)
+          { 
+            if ( winningNumber % 2 == 0) {
+                // if number even
+                win += placedChipSum * 2;
+            } else {
+                // if number is odd
+                win += placedChipSum * 2;
+            }
+          }
       }
-      else if (placedChipType === ValueType.BLACK && blackNumbers.includes(winningNumber))
-      { // if bet on black and win
-          win += placedChipSum * 2;
-      }
-      else if (placedChipType === ValueType.RED && redNumbers.includes(winningNumber))
-      { // if bet on red and win
-          win += placedChipSum * 2;
-      }
-      else if (placedChipType === ValueType.NUMBERS_1_18 && (winningNumber >= 1 && winningNumber <= 18))
-      { // if number is 1 to 18
-          win += placedChipSum * 2;
-      }
-      else if (placedChipType === ValueType.NUMBERS_19_36 && (winningNumber >= 19 && winningNumber <= 36))
-      { // if number is 19 to 36
-          win += placedChipSum * 2;
-      }
-      else if (placedChipType === ValueType.NUMBERS_1_12 && (winningNumber >= 1 && winningNumber <= 12))
-      { // if number is within range of row1
-          win += placedChipSum * 3;
-      }
-      else if (placedChipType === ValueType.NUMBERS_2_12 && (winningNumber >= 13 && winningNumber <= 24))
-      { // if number is within range of row2
-          win += placedChipSum * 3;
-      }
-      else if (placedChipType === ValueType.NUMBERS_3_12 && (winningNumber >= 25 && winningNumber <= 36))
-      { // if number is within range of row3
-          win += placedChipSum * 3;
-      }
-      else if (placedChipType === ValueType.EVEN || placedChipType === ValueType.ODD)
-      { 
-        if ( winningNumber % 2 == 0) {
-             // if number even
-            win += placedChipSum * 2;
-        } else {
-            // if number is odd
-            win += placedChipSum * 2;
-        }
-      }
-  }
+      totalwin+=win;
+    }
 
-  return win;
+  return totalwin;
 }
