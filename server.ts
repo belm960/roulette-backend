@@ -6,11 +6,7 @@ import { createServer } from "http";
 /** Server Handling */
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-    cors: {
-    origin: "http://localhost:3000"
-  }
-});
+const io = new Server(httpServer, {});
 
 
 enum ValueType {
