@@ -7,7 +7,7 @@ import { createServer } from "http";
 const httpServer = createServer();
 const io = new Server(httpServer, {
     cors: {
-    origin: "https://roulette-game-casino.vercel.app/"
+    origin: "https://roulette-casino-game.vercel.app/"
   }
 });
 
