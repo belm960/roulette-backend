@@ -1,9 +1,9 @@
-import { createServer } from "http";
+const express = require("express")
 import  { Server } from "socket.io";
 import  {Timer} from "easytimer.js";
 
 /** Server Handling */
-const httpServer = createServer();
+const httpServer = express();
 const io = new Server(httpServer, {});
 
 
