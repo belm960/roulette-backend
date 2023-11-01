@@ -4,11 +4,7 @@ import  {Timer} from "easytimer.js";
 
 /** Server Handling */
 const httpServer = createServer();
-const io = new Server(httpServer, {
-  cors: {
-    origin: "http://localhost:3000"
-  }
-});
+const io = new Server(httpServer, {});
 
 
 enum ValueType {
